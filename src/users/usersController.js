@@ -6,8 +6,8 @@ const getAllUsers = async (req, res) => {
         const { role } = req.query
 
         let users
-        if(role) users = await client.query(`SELECT id, nama, nrp, pangkat, jabatan, bagian, image, username, email, role FROM users WHERE role='${role}' ORDER BY id DESC`)
-        else users = await client.query(`SELECT id, nama, nrp, pangkat, jabatan, bagian, image, username, email, role FROM users ORDER BY id DESC`)
+        if(role) users = await client.query(`SELECT id, nama, nrp, pangkat, jabatan, bagian, foto, username, role FROM users WHERE role='${role}' ORDER BY id DESC`)
+        else users = await client.query(`SELECT id, nama, nrp, pangkat, jabatan, bagian, foto, username, role FROM users ORDER BY id DESC`)
 
         res.status(200).json({
             success: true,
@@ -27,7 +27,7 @@ const getUserById = async (req, res) => {
     try {
         const { user_id } = req.params
 
-        const user = await client.query(`SELECT id, nama, nrp, pangkat, jabatan, bagian, image, username, email, role FROM users WHERE id=${user_id}`)
+        const user = await client.query(`SELECT id, nama, nrp, pangkat, jabatan, bagian, foto, username, alamat, role FROM users WHERE id=${user_id}`)
         if(!user.rows.length) throw error('User not Found', 404)
 
         res.status(200).json({

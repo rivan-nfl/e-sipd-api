@@ -6,49 +6,54 @@ require('dotenv').config()
 
 const register = async (req, res) => {
     try {
-        const { nama, nrp, pangkat, jabatan, bagian, image, username, email, password, role } = req.body
+        const { nama, nrp, alamat, pangkat, jabatan, bagian, image, username, password, role } = req.body
 
         if(
             !nama ||
             !nrp ||
+            !alamat ||
             !pangkat ||
             !jabatan ||
+            !role ||
             (role == 'dipa' && !bagian) ||
             !username ||
-            !email ||
-            !password ||
-            !role
+            !password
         ) throw error(`All Fields is required !`, 400)
 
-        const checkUserInDB = await client.query(`SELECT nama, email FROM users WHERE username='${username}' OR email='${email}'`)
+        const checkUserInDB = await client.query(`SELECT nama FROM users WHERE username='${username}'`)
         if(checkUserInDB.rows.length) throw error('User already exist', 400)
+
+        const createdDate = new Date().toISOString()
 
         const newUser = await client.query(`
             INSERT INTO users (
                 nama,
                 nrp,
+                alamat,
                 pangkat,
                 jabatan,
                 bagian,
-                image,
+                foto,
                 username,
-                email,
                 password,
-                role
-            )
+                role,
+                created_at,
+                updated_at
+            ) 
             VALUES (
                 '${nama}',
-                '${nrp}',
+                '${nrp}', 
+                '${alamat}', 
                 '${pangkat}',
                 '${jabatan}',
                 '${bagian}',
-                '${image || 'https://asset.kompas.com/crops/hR9ws8oHmOUpyvfttDaOPaZgkew=/0x37:521x384/750x500/data/photo/2022/03/30/624390f3cc33d.jpeg'}',
+                '${image || 'http://s3.amazonaws.com/37assets/svn/765-default-avatar.png'}',
                 '${username}',
-                '${email}',
                 '${password}',
-                '${role}'
+                '${role}',
+                '${createdDate}',
+                '${createdDate}'
             )
-            RETURNING nama, username, email, nrp, pangkat, jabatan, bagian, image, role;
         `)
 
         res.status(201).json({
@@ -71,7 +76,7 @@ const login = async (req, res) => {
 
         if(!username || !password) throw error(`All Fields is required !`, 400)
 
-        const userInDB = await client.query(`SELECT id, nama, username, email, password FROM users WHERE username='${username}'`)
+        const userInDB = await client.query(`SELECT id, nama, username, alamat, role, password FROM users WHERE username='${username}'`)
         if(!userInDB.rows.length) throw error('User Not Found', 404)
         if(userInDB.rows[0].password != password) throw error('Invalid Credentials', 401)
 
@@ -81,7 +86,7 @@ const login = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            // data: userInDB.rows[0],
+            data: userInDB.rows[0],
             token
         })
         
