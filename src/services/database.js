@@ -46,6 +46,8 @@ const createTables = async() => {
             daerah_tujuan VARCHAR(50) NOT NULL,
             tgl_berangkat VARCHAR(50) NOT NULL,
             tgl_kembali VARCHAR(50) NOT NULL,
+            pengirim INT NOT NULL,
+            penerima VARCHAR(50) NOT NULL,
             status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
@@ -71,6 +73,19 @@ const createTables = async() => {
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS notifikasi (
+            id serial PRIMARY KEY,
+            user_id INT NOT NULL,
+            user_role VARCHAR(50) NOT NULL,
+            id_perjalanan INT NOT NULL,
+            title VARCHAR(100) NOT NULL,
+            deskripsi VARCHAR(100) NOT NULL,
+            detail VARCHAR(500) NOT NULL,
+            status VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL
+        );
     `)
 
     console.log('Database Tables created');
@@ -81,7 +96,7 @@ const connectDB = async() => {
         await client.connect()
         
         const checkTables = await client.query(`SELECT table_name FROM information_schema.tables WHERE table_schema='public'`)
-        if(checkTables.rowCount < 4) createTables()
+        if(checkTables.rowCount < 5) createTables()
 
         console.log('Database is connected !');
         return true
