@@ -242,7 +242,6 @@ const getAllTransportasi = async(req, res) => {
 
 const getAnggaran = async (req, res) => {
     try {
-
         const allAnggaran = await client.query(`SELECT * FROM anggaran_harian`)
 
         res.status(201).json({
