@@ -1,5 +1,5 @@
 const express = require('express')
-const { createPerjalanan, getAllTransportasi, getAllPerjalanan, getAnggaran, updatePerjalanan } = require('./e-sipdController')
+const { createPerjalanan, getAllTransportasi, getAllPerjalanan, getAnggaran, approvePerjalanan, updatePerjalanan } = require('./e-sipdController')
 
 const jwt = require('jsonwebtoken')
 const error = require("../helper/error");
@@ -15,8 +15,11 @@ esipdRouter.post('/', createPerjalanan)
 // Get All Perjalanan
 esipdRouter.get('/', getAllPerjalanan)
 
+// Approve Perjalanan
+esipdRouter.put('/:perjalanan_id', approvePerjalanan)
+
 // Update Perjalanan
-esipdRouter.put('/:perjalanan_id', updatePerjalanan)
+esipdRouter.put('/update/:perjalanan_id', updatePerjalanan)
 
 // Transportasi
 esipdRouter.get('/transportasi', getAllTransportasi)

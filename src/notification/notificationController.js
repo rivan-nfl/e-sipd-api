@@ -9,7 +9,9 @@ const getAllNotifications = async (req, res) => {
         let allNotifications = []
 
         if(token.role == 'anggota') {
-            allNotifications = await client.query(`SELECT * FROM notifikasi WHERE user_id=${token.id} AND user_role='anggota' ORDER BY id DESC`)
+            allNotifications = await client.query(`SELECT * FROM notifikasi WHERE user_id=${token.id} AND user_role='anggota' AND perjalanan_status='approved' ORDER BY id DESC`)
+        } else if(token.role == 'admin') {
+            allNotifications = await client.query(`SELECT * FROM notifikasi WHERE user_role='anggota' AND user_role='anggota' AND perjalanan_status='rejected' ORDER BY id DESC`)
         } else {
             allNotifications = await client.query(`SELECT * FROM notifikasi WHERE user_role='dipa' ORDER BY id DESC`)
         }

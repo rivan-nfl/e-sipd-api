@@ -44,10 +44,14 @@ const createTables = async() => {
             nomor_sppd VARCHAR(50) NOT NULL,
             jenis_perjalanan VARCHAR(50) NOT NULL,
             daerah_tujuan VARCHAR(50) NOT NULL,
+            kota_asal VARCHAR(50) NOT NULL,
+            kota_tujuan VARCHAR(50) NOT NULL,
             tgl_berangkat VARCHAR(50) NOT NULL,
             tgl_kembali VARCHAR(50) NOT NULL,
+            transportasi VARCHAR(50) NOT NULL,
             pengirim INT NOT NULL,
             penerima VARCHAR(50) NOT NULL,
+            penerima_id INT NOT NULL,
             status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
@@ -56,6 +60,7 @@ const createTables = async() => {
         CREATE TABLE IF NOT EXISTS transportasi (
             id serial PRIMARY KEY,
             nama VARCHAR(50) NOT NULL,
+            provinsi VARCHAR(50) NOT NULL,
             lokasi_awal VARCHAR(50) NOT NULL,
             lokasi_tujuan VARCHAR(50) NOT NULL,
             type VARCHAR(50) NOT NULL,
@@ -67,9 +72,10 @@ const createTables = async() => {
 
         CREATE TABLE IF NOT EXISTS anggaran_harian (
             id serial PRIMARY KEY,
+            pangkat VARCHAR(50) NOT NULL,
             tingkat VARCHAR(50) NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            anggaran VARCHAR(50) NOT NULL,
+            anggaran_luar_kota VARCHAR(50) NOT NULL,
+            anggaran_dalam_kota VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
         );
@@ -83,6 +89,7 @@ const createTables = async() => {
             deskripsi VARCHAR(100) NOT NULL,
             detail VARCHAR(500) NOT NULL,
             status VARCHAR(50) NOT NULL,
+            perjalanan_status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
         );

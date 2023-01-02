@@ -6,7 +6,7 @@ const createPerjalanan = async (req, res) => {
     try {
         const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
 
-        const { keterangan, nomor_sprint, nomor_sppd, jenis_perjalanan, daerah_tujuan, tgl_berangkat, tgl_kembali, penerima } = req.body
+        const { keterangan, nomor_sprint, nomor_sppd, jenis_perjalanan, daerah_tujuan, kota_asal, kota_tujuan, tgl_berangkat, tgl_kembali, transportasi, penerima } = req.body
 
         // Validation
         if(
@@ -14,9 +14,12 @@ const createPerjalanan = async (req, res) => {
             !nomor_sprint ||
             !nomor_sppd ||
             !jenis_perjalanan ||
-            !daerah_tujuan || 
+            !daerah_tujuan ||
+            !kota_asal ||
+            !kota_tujuan ||
             !tgl_berangkat ||
             !tgl_kembali ||
+            !transportasi ||
             !penerima
         ) throw error(`All Fields is required !`, 400)
 
@@ -45,10 +48,14 @@ const createPerjalanan = async (req, res) => {
                 nomor_sppd,
                 jenis_perjalanan,
                 daerah_tujuan,
+                kota_asal,
+                kota_tujuan,
                 tgl_berangkat,
                 tgl_kembali,
+                transportasi,
                 pengirim,
                 penerima,
+                penerima_id,
                 status,
                 created_at,
                 updated_at
@@ -59,10 +66,14 @@ const createPerjalanan = async (req, res) => {
                 '${nomor_sppd}', 
                 '${jenis_perjalanan}',
                 '${daerah_tujuan}',
+                '${kota_asal}',
+                '${kota_tujuan}',
                 '${tglBerangkat}',
                 '${tglKembali}',
+                '${transportasi}',
                 ${token.id},
                 '${penerimaInDB.rows[0].nama}',
+                ${penerimaInDB.rows[0].id},
                 'pending',
                 '${createdDate}',
                 '${createdDate}'
@@ -74,13 +85,16 @@ const createPerjalanan = async (req, res) => {
                 nomor_sppd,
                 jenis_perjalanan,
                 daerah_tujuan,
+                kota_asal,
+                kota_tujuan,
                 tgl_berangkat,
                 tgl_kembali,
+                transportasi,
                 pengirim,
                 penerima,
                 status
         `)
-        console.log(newPerjalanan.rows[0].id);
+
         await client.query(`
             INSERT INTO notifikasi (
                 user_id,
@@ -90,6 +104,7 @@ const createPerjalanan = async (req, res) => {
                 deskripsi,
                 detail,
                 status,
+                perjalanan_status,
                 created_at,
                 updated_at
             ) 
@@ -101,6 +116,7 @@ const createPerjalanan = async (req, res) => {
                 'Pengajuan Baru Untuk Disetujui',
                 'Pengajuan Baru Bernomor Sprint ${newPerjalanan.rows[0].nomor_sprint} telah melakukan pengajuan baru.',
                 'close',
+                'pending',
                 '${createdDate}',
                 '${createdDate}'
             )
@@ -120,7 +136,7 @@ const createPerjalanan = async (req, res) => {
     }
 }
 
-const updatePerjalanan = async (req, res) => {
+const approvePerjalanan = async (req, res) => {
     try {
         const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
         const { status, keterangan } = req.body
@@ -137,9 +153,10 @@ const updatePerjalanan = async (req, res) => {
         if(checkPerjalananInDB.rows[0].status == status) throw error(`Perjalanan is ${status}`, 404)
 
         // Check if Approver is valid user
-        const approverAdminInDB = await client.query(`SELECT id, nama FROM users WHERE id='${token.id}' AND role='admin'`)
+        // const approverAdminInDB = await client.query(`SELECT id, nama FROM users WHERE id='${token.id}' AND role='admin'`)
         const approverDipaInDB = await client.query(`SELECT id, nama FROM users WHERE id='${token.id}' AND role='dipa'`)
-        if(!approverAdminInDB.rows.length && !approverDipaInDB.rows.length) throw error('Approver is not Permitted to Approve', 400)
+        // if(!approverAdminInDB.rows.length && !approverDipaInDB.rows.length) throw error('Approver is not Permitted to Approve', 400)
+        if(!approverDipaInDB.rows.length) throw error('Approver is not Permitted to Approve', 400)
 
         // Check if Penerima Exist
         const penerimaInDB = await client.query(`SELECT id, nama, role FROM users WHERE nama='${checkPerjalananInDB.rows[0].penerima}'`)
@@ -165,6 +182,7 @@ const updatePerjalanan = async (req, res) => {
                 deskripsi,
                 detail,
                 status,
+                perjalanan_status,
                 created_at,
                 updated_at
             ) 
@@ -174,8 +192,82 @@ const updatePerjalanan = async (req, res) => {
                 ${checkPerjalananInDB.rows[0].id},
                 'Pengajuan ${checkPerjalananInDB.rows[0].nomor_sprint}',
                 'Pengajuanmu telah di ${newPerjalanan.rows[0].status == 'approved' ? 'Setujui' : 'Tolak'}',
-                '${keterangan}',
+                '${status == 'rejected' ? keterangan : 'Pengajuanmu telah Disetujui'}',
                 'close',
+                '${newPerjalanan.rows[0].status}',
+                '${createdDate}',
+                '${createdDate}'
+            )
+        `)
+
+        res.status(201).json({
+            success: true,
+            data: newPerjalanan.rows[0]
+        })
+        
+    } catch (error) {
+        console.log('Error Approve Perjalanan = ', error);
+        res.status(error.status || 500).send({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+const updatePerjalanan = async (req, res) => {
+    try {
+        const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
+        const { transportasi } = req.body
+
+        // Validation
+        if( !transportasi ) throw error(`All Fields is required !`, 400)
+
+        // Check if Perjalanan exist
+        const checkPerjalananInDB = await client.query(`SELECT * FROM esipd WHERE id=${req.params.perjalanan_id}`)
+        if(!checkPerjalananInDB.rows.length) throw error('Perjalanan Not Found', 404)
+
+        // Check if Approver is valid user
+        const approverAdminInDB = await client.query(`SELECT id, nama FROM users WHERE id='${token.id}' AND role='admin'`)
+        if(!approverAdminInDB.rows.length) throw error('Admin Not Found', 404)
+
+        // Check if Penerima Exist
+        const penerimaInDB = await client.query(`SELECT id, nama, role FROM users WHERE nama='${checkPerjalananInDB.rows[0].penerima}'`)
+        if(!penerimaInDB.rows.length) throw error('Penerima Not Found', 404)
+
+        const createdDate = new Date().toISOString()
+
+        // Update
+        const newPerjalanan = await client.query(`
+            UPDATE esipd
+            SET status = 'pending',
+                updated_at = '${createdDate}',
+                transportasi = '${transportasi}'
+            WHERE id = ${req.params.perjalanan_id}
+            RETURNING *;
+        `)
+
+        await client.query(`
+            INSERT INTO notifikasi (
+                user_id,
+                user_role,
+                id_perjalanan,
+                title,
+                deskripsi,
+                detail,
+                status,
+                perjalanan_status,
+                created_at,
+                updated_at
+            ) 
+            VALUES (
+                0,
+                'dipa',
+                ${checkPerjalananInDB.rows[0].id},
+                'Pengajuan ${checkPerjalananInDB.rows[0].nomor_sprint}',
+                'Revisi Pengajuan Perjalanan Untuk Disetujui',
+                'Pengajuan Baru Bernomor Sprint ${newPerjalanan.rows[0].nomor_sprint} telah melakukan Revisi Pengajuan Perjalanan.',
+                'close',
+                '${newPerjalanan.rows[0].status}',
                 '${createdDate}',
                 '${createdDate}'
             )
@@ -195,10 +287,16 @@ const updatePerjalanan = async (req, res) => {
     }
 }
 
-const getAllPerjalanan = async (_, res) => {
+const getAllPerjalanan = async (req, res) => {
     try {
 
-        const allPerjalanan = await client.query(`SELECT * FROM esipd ORDER BY id DESC`)
+        let allPerjalanan = new Array()
+
+        if(req.query.perjalanan_id) {
+            allPerjalanan = await client.query(`SELECT * FROM esipd WHERE id=${req.query.perjalanan_id}`)
+        } else {
+            allPerjalanan = await client.query(`SELECT * FROM esipd ORDER BY id DESC`)
+        }
 
         res.status(201).json({
             success: true,
@@ -220,6 +318,8 @@ const getAllTransportasi = async(req, res) => {
         
         if(req.query.lokasi_asal && req.query.lokasi_tujuan && req.query.transportasi) {
             allTransportasi = await client.query(`SELECT * FROM transportasi WHERE lokasi_awal='${req.query.lokasi_asal}' AND lokasi_tujuan='${req.query.lokasi_tujuan}' AND nama='${req.query.transportasi}'`)
+        } else if(req.query.lokasi_asal && req.query.lokasi_tujuan) {
+            allTransportasi = await client.query(`SELECT * FROM transportasi WHERE lokasi_awal='${req.query.lokasi_asal}' AND lokasi_tujuan='${req.query.lokasi_tujuan}'`)
         } else if(req.query.type) {
             allTransportasi = await client.query(`SELECT * FROM transportasi WHERE type='${req.query.type}'`)
         } else {
@@ -260,6 +360,7 @@ const getAnggaran = async (req, res) => {
 
 module.exports = {
     createPerjalanan,
+    approvePerjalanan,
     updatePerjalanan,
     getAllPerjalanan,
     getAllTransportasi,
