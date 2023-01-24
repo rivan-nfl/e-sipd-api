@@ -76,7 +76,7 @@ const login = async (req, res) => {
 
         if(!username || !password) throw error(`All Fields is required !`, 400)
 
-        const userInDB = await client.query(`SELECT id, nama, username, alamat, role, password FROM users WHERE username='${username}'`)
+        const userInDB = await client.query(`SELECT * FROM users WHERE username='${username}'`)
         if(!userInDB.rows.length) throw error('User Not Found', 404)
         if(userInDB.rows[0].password != password) throw error('Invalid Credentials', 401)
 

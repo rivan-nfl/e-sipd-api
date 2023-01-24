@@ -1,5 +1,5 @@
 const express = require('express')
-const { createPerjalanan, getAllTransportasi, getAllPerjalanan, getAnggaran, approvePerjalanan, updatePerjalanan } = require('./e-sipdController')
+const { createPerjalanan, getAllTransportasi, getAllPerjalanan, getAnggaran, approvePerjalanan, updatePerjalanan, getPangkat } = require('./e-sipdController')
 
 const jwt = require('jsonwebtoken')
 const error = require("../helper/error");
@@ -26,5 +26,8 @@ esipdRouter.get('/transportasi', getAllTransportasi)
 
 // Anggaran
 esipdRouter.get('/anggaran', getAnggaran)
+
+// Get Pangkat
+esipdRouter.get('/pangkat', getPangkat)
 
 module.exports = esipdRouter

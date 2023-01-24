@@ -93,6 +93,15 @@ const createTables = async() => {
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS pangkat (
+            id serial PRIMARY KEY,
+            pangkat VARCHAR(50) NOT NULL,
+            sub_pangkat VARCHAR(50) NOT NULL,
+            tingkat VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP
+        );
     `)
 
     console.log('Database Tables created');
@@ -103,7 +112,7 @@ const connectDB = async() => {
         await client.connect()
         
         const checkTables = await client.query(`SELECT table_name FROM information_schema.tables WHERE table_schema='public'`)
-        if(checkTables.rowCount < 5) createTables()
+        if(checkTables.rowCount < 6) createTables()
 
         console.log('Database is connected !');
         return true

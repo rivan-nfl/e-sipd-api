@@ -342,7 +342,12 @@ const getAllTransportasi = async(req, res) => {
 
 const getAnggaran = async (req, res) => {
     try {
-        const allAnggaran = await client.query(`SELECT * FROM anggaran_harian`)
+        let allAnggaran = new Array()
+        if(req.query.tingkat) {
+            allAnggaran = await client.query(`SELECT * FROM anggaran_harian WHERE tingkat='${req.query.tingkat}'`)
+        } else {
+            allAnggaran = await client.query(`SELECT * FROM anggaran_harian`)
+        }
 
         res.status(201).json({
             success: true,
@@ -350,7 +355,30 @@ const getAnggaran = async (req, res) => {
         })
         
     } catch (error) {
-        console.log('Error Get Transportasi = ', error.message);
+        console.log('Error Get Anggaran = ', error.message);
+        res.status(error.status || 500).send({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+const getPangkat = async (req, res) => {
+    try {
+        let allPangkat = new Array()
+        if(req.query.pangkat) {
+            allPangkat = await client.query(`SELECT * FROM pangkat WHERE sub_pangkat='${req.query.pangkat}'`)
+        } else {
+            allPangkat = await client.query(`SELECT * FROM pangkat`)
+        }
+
+        res.status(201).json({
+            success: true,
+            data: allPangkat.rows
+        })
+        
+    } catch (error) {
+        console.log('Error Get Pangkat = ', error.message);
         res.status(error.status || 500).send({
             success: false,
             message: error.message
@@ -364,5 +392,6 @@ module.exports = {
     updatePerjalanan,
     getAllPerjalanan,
     getAllTransportasi,
-    getAnggaran
+    getAnggaran,
+    getPangkat
 }

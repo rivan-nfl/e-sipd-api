@@ -89,8 +89,38 @@ const editUser = async (req, res) => {
     }
 }
 
+const deleteUser = async (req, res) => {
+    try {
+        const { user_id } = req.params
+
+        if( !user_id ) throw error(`User ID is required !`, 400)
+
+        const user = await client.query(`SELECT nama role FROM users WHERE id=${user_id}`)
+        if(!user.rows.length) throw error('User not Found', 404)
+
+        const deletedUser = await client.query(`
+            DELETE FROM users
+            WHERE id =${user_id}
+            RETURNING *
+        `)
+
+        res.status(200).json({
+            success: true,
+            data: deletedUser.rows
+        })
+        
+    } catch (error) {
+        console.log('Error Delete User = ', error.message);
+        res.status(error.status || 500).send({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
 module.exports = {
     getAllUsers,
     getUserById,
-    editUser
+    editUser,
+    deleteUser
 }
