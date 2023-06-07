@@ -4,7 +4,7 @@ const { client } = require('../services/database');
 
 const getAllNotifications = async (req, res) => {
     try {
-        const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
 
         let allNotifications = []
 

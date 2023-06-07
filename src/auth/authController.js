@@ -82,7 +82,7 @@ const login = async (req, res) => {
 
         delete userInDB.rows[0].password
 
-        const token = jwt.sign(userInDB.rows[0], process.env.TOKEN_PRIVATE_KEY);
+        const token = jwt.sign(userInDB.rows[0], "$!1HoW6Dr1");
 
         res.status(201).json({
             success: true,

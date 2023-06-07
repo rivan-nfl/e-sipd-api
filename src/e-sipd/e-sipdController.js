@@ -4,7 +4,7 @@ const { client } = require("../services/database");
 
 const createPerjalanan = async (req, res) => {
     try {
-        const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
 
         const { keterangan, nomor_sprint, nomor_sppd, jenis_perjalanan, daerah_tujuan, kota_asal, kota_tujuan, tgl_berangkat, tgl_kembali, transportasi, penerima } = req.body
 
@@ -138,7 +138,7 @@ const createPerjalanan = async (req, res) => {
 
 const approvePerjalanan = async (req, res) => {
     try {
-        const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
         const { status, keterangan } = req.body
 
         // Validation
@@ -216,11 +216,23 @@ const approvePerjalanan = async (req, res) => {
 
 const updatePerjalanan = async (req, res) => {
     try {
-        const token = jwt.verify(String(req.headers.authorization).slice(7), process.env.TOKEN_PRIVATE_KEY)
-        const { transportasi } = req.body
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
+        const { keterangan, nomor_sprint, nomor_sppd, jenis_perjalanan, daerah_tujuan, kota_asal, kota_tujuan, tgl_berangkat, tgl_kembali, transportasi, penerima } = req.body
 
         // Validation
-        if( !transportasi ) throw error(`All Fields is required !`, 400)
+        if(
+            !keterangan ||
+            !nomor_sprint ||
+            !nomor_sppd ||
+            !jenis_perjalanan ||
+            !daerah_tujuan ||
+            !kota_asal ||
+            !kota_tujuan ||
+            !tgl_berangkat ||
+            !tgl_kembali ||
+            !transportasi ||
+            !penerima
+        ) throw error(`All Fields is required !`, 400)
 
         // Check if Perjalanan exist
         const checkPerjalananInDB = await client.query(`SELECT * FROM esipd WHERE id=${req.params.perjalanan_id}`)
@@ -234,14 +246,28 @@ const updatePerjalanan = async (req, res) => {
         const penerimaInDB = await client.query(`SELECT id, nama, role FROM users WHERE nama='${checkPerjalananInDB.rows[0].penerima}'`)
         if(!penerimaInDB.rows.length) throw error('Penerima Not Found', 404)
 
+        const tglBerangkat = new Date(tgl_berangkat).toISOString()
+        const tglKembali = new Date(tgl_kembali).toISOString()
         const createdDate = new Date().toISOString()
 
         // Update
         const newPerjalanan = await client.query(`
             UPDATE esipd
-            SET status = 'pending',
-                updated_at = '${createdDate}',
-                transportasi = '${transportasi}'
+            SET keterangan = '${keterangan}',
+                nomor_sprint = '${nomor_sprint}',
+                nomor_sppd = '${nomor_sppd}',
+                jenis_perjalanan = '${jenis_perjalanan}',
+                daerah_tujuan = '${daerah_tujuan}',
+                kota_asal = '${kota_asal}',
+                kota_tujuan = '${kota_tujuan}',
+                tgl_berangkat = '${tglBerangkat}',
+                tgl_kembali = '${tglKembali}',
+                transportasi = '${transportasi}',
+                pengirim = ${token.id},
+                penerima = '${penerimaInDB.rows[0].nama}',
+                penerima_id = ${penerimaInDB.rows[0].id},
+                status = 'pending',
+                updated_at = '${createdDate}'
             WHERE id = ${req.params.perjalanan_id}
             RETURNING *;
         `)

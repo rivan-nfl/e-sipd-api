@@ -10,7 +10,7 @@ const checkAuth = async (req, res, next) => {
         const token = String(req.headers.authorization).slice(7)
         if(!token) throw error('Invalid Token', 401);
 
-        const decoded = jwt.verify(token, process.env.TOKEN_PRIVATE_KEY);
+        const decoded = jwt.verify(token, "$!1HoW6Dr1");
         if(!decoded) throw error('Invalid Token', 401);
     
         next()
