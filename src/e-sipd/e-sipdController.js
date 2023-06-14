@@ -315,11 +315,14 @@ const updatePerjalanan = async (req, res) => {
 
 const getAllPerjalanan = async (req, res) => {
     try {
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
 
         let allPerjalanan = new Array()
 
         if(req.query.perjalanan_id) {
             allPerjalanan = await client.query(`SELECT * FROM esipd WHERE id=${req.query.perjalanan_id}`)
+        } else if(token.role == 'anggota') {
+            allPerjalanan = await client.query(`SELECT * FROM esipd WHERE penerima_id=${token.id} ORDER BY id DESC`)
         } else {
             allPerjalanan = await client.query(`SELECT * FROM esipd ORDER BY id DESC`)
         }
@@ -395,7 +398,7 @@ const getPangkat = async (req, res) => {
         if(req.query.pangkat) {
             allPangkat = await client.query(`SELECT * FROM pangkat WHERE sub_pangkat='${req.query.pangkat}'`)
         } else {
-            allPangkat = await client.query(`SELECT * FROM pangkat`)
+            allPangkat = await client.query(`SELECT * FROM pangkat ORDER BY id ASC`)
         }
 
         res.status(201).json({

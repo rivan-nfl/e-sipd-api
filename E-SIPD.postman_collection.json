@@ -1,0 +1,474 @@
+{
+	"info": {
+		"_postman_id": "cab2cb5e-afca-464c-b382-7e62354a115a",
+		"name": "E-SIPD",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "19382947"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"nama\": \"Anggota\",\r\n    \"nrp\": \"1234567890\",\r\n    \"alamat\": \"Jakarta\",\r\n    \"pangkat\": \"Jenderal\",\r\n    \"jabatan\": \"Jenderal\",\r\n    \"bagian\": \"\",\r\n    \"image\": \"\",\r\n    \"username\": \"anggota\",\r\n    \"password\": \"password\",\r\n    \"role\": \"anggota\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/auth/register"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"admin\",\r\n    \"password\": \"password\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/auth/login"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/users",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "admin",
+									"description": "admin, dipa, anggota",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/users/1",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"1"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "admin",
+									"description": "admin, dipa, anggota",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit User by ID",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"nama\": \"Mantap\",\r\n    \"nrp\": \"1234567890\",\r\n    \"pangkat\": \"Jendral\",\r\n    \"jabatan\": \"Jendral\",\r\n    \"bagian\": \"\",\r\n    \"image\": \"\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/users/1",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"users",
+								"1"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "admin",
+									"description": "admin, dipa, anggota",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User by ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/users/1"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "E-Sipd (Perjalanan)",
+			"item": [
+				{
+					"name": "Create E-Sipd",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"keterangan\": \"Perjalanan Dinas\",\n    \"nomor_sprint\": \"111/XI/2022\",\n    \"nomor_sppd\": \"111/XI/2022\",\n    \"jenis_perjalanan\": \"luar_kota\",\n    \"daerah_tujuan\": \"DKI Jakarta\",\n    \"kota_asal\": \"Surabaya\",\n    \"kota_tujuan\": \"Madiun\",\n    \"tgl_berangkat\": \"2022/11/30\",\n    \"tgl_kembali\": \"2022/12/30\",\n    \"transportasi\": \"Kereta\",\n    \"penerima\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/e-sipd"
+					},
+					"response": []
+				},
+				{
+					"name": "Approve E-Sipd",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"approved\",\n    \"keterangan\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/e-sipd/:perjalanan_id",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"e-sipd",
+								":perjalanan_id"
+							],
+							"variable": [
+								{
+									"key": "perjalanan_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update E-Sipd",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transportasi\": \"Kereta\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/e-sipd/update/:perjalanan_id",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"e-sipd",
+								"update",
+								":perjalanan_id"
+							],
+							"variable": [
+								{
+									"key": "perjalanan_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All E-Sipd",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/e-sipd",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"e-sipd"
+							],
+							"query": [
+								{
+									"key": "perjalanan_id",
+									"value": "12",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Other",
+			"item": [
+				{
+					"name": "Get All Transportasi",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/e-sipd/transportasi?type=luar_kota&lokasi_tujuan=Madiun&lokasi_asal=Surabaya",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"e-sipd",
+								"transportasi"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "luar_kota"
+								},
+								{
+									"key": "lokasi_tujuan",
+									"value": "Madiun"
+								},
+								{
+									"key": "lokasi_asal",
+									"value": "Surabaya"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Anggaran",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/e-sipd/anggaran"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pangkat",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/e-sipd/pangkat?pangkat=Kolonel",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"e-sipd",
+								"pangkat"
+							],
+							"query": [
+								{
+									"key": "pangkat",
+									"value": "Kolonel"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notification",
+			"item": [
+				{
+					"name": "Get All Notifications",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/notifications"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Notification by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"open\" \n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/notifications/:notification_id",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"notifications",
+								":notification_id"
+							],
+							"variable": [
+								{
+									"key": "notification_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "url",
+			"value": "http://localhost:4000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtYSI6IkFkbWluIiwidXNlcm5hbWUiOiJhZG1pbiIsImFsYW1hdCI6Ikpha2FydGEiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE2NjkzNzQwNDh9.Y-WZWi3XJQss_t4ilVewMAWwclf0Wc1_Y98XUTqlQkY",
+			"type": "string"
+		}
+	]
+}
