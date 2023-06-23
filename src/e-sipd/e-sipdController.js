@@ -322,9 +322,37 @@ const getAllPerjalanan = async (req, res) => {
         if(req.query.perjalanan_id) {
             allPerjalanan = await client.query(`SELECT * FROM esipd WHERE id=${req.query.perjalanan_id}`)
         } else if(token.role == 'anggota') {
-            allPerjalanan = await client.query(`SELECT * FROM esipd WHERE penerima_id=${token.id} ORDER BY id DESC`)
+            allPerjalanan = await client.query(`SELECT * FROM esipd WHERE penerima_id=${token.id} AND status != 'finished' ORDER BY id DESC`)
         } else {
-            allPerjalanan = await client.query(`SELECT * FROM esipd ORDER BY id DESC`)
+            allPerjalanan = await client.query(`SELECT * FROM esipd WHERE status != 'finished' ORDER BY id DESC`)
+        }
+
+        res.status(201).json({
+            success: true,
+            data: allPerjalanan.rows
+        })
+        
+    } catch (error) {
+        console.log('Error Get Perjalanan = ', error.message);
+        res.status(error.status || 500).send({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+const getAllLaporan = async (req, res) => {
+    try {
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
+
+        let allPerjalanan = new Array()
+
+        if(req.query.perjalanan_id) {
+            allPerjalanan = await client.query(`SELECT * FROM laporan_perjalanan WHERE id=${req.query.perjalanan_id}`)
+        } else if(token.role == 'anggota') {
+            allPerjalanan = await client.query(`SELECT * FROM laporan_perjalanan WHERE penerima_id=${token.id} ORDER BY id DESC`)
+        } else {
+            allPerjalanan = await client.query(`SELECT * FROM laporan_perjalanan ORDER BY id DESC`)
         }
 
         res.status(201).json({
@@ -415,12 +443,93 @@ const getPangkat = async (req, res) => {
     }
 }
 
+// Selesai Perjalanan
+const selesaiPerjalanan = async (req, res) => {
+    try {
+        const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
+        
+        // Check if Perjalanan exist
+        const checkPerjalananInDB = await client.query(`SELECT * FROM esipd WHERE id=${req.params.perjalanan_id}`)
+        if(!checkPerjalananInDB.rows.length) throw error('Perjalanan Not Found', 404)
+        if(checkPerjalananInDB.rows[0].status == 'finished') throw error('Perjalanan is finished', 400)
+
+        // Check if Approver is user penerima
+        if(checkPerjalananInDB.rows[0].penerima_id !== token.id && token.role != 'admin') throw error('User tidak diperbolehkan', 403)
+
+        const createdDate = new Date().toISOString()
+
+        // Update
+        const newPerjalanan = await client.query(`
+            UPDATE esipd
+            SET status = 'finished',
+                updated_at = '${createdDate}'
+            WHERE id = ${req.params.perjalanan_id}
+            RETURNING *;
+        `)
+
+        // Create Perjalanan
+        const newLaporan = await client.query(`
+            INSERT INTO laporan_perjalanan (
+                keterangan,
+                nomor_sprint,
+                nomor_sppd,
+                jenis_perjalanan,
+                daerah_tujuan,
+                kota_asal,
+                kota_tujuan,
+                tgl_berangkat,
+                tgl_kembali,
+                transportasi,
+                pengirim,
+                penerima,
+                penerima_id,
+                status,
+                created_at,
+                updated_at
+            ) 
+            VALUES (
+                '${checkPerjalananInDB.rows[0].keterangan}',
+                '${checkPerjalananInDB.rows[0].nomor_sprint}', 
+                '${checkPerjalananInDB.rows[0].nomor_sppd}', 
+                '${checkPerjalananInDB.rows[0].jenis_perjalanan}',
+                '${checkPerjalananInDB.rows[0].daerah_tujuan}',
+                '${checkPerjalananInDB.rows[0].kota_asal}',
+                '${checkPerjalananInDB.rows[0].kota_tujuan}',
+                '${checkPerjalananInDB.rows[0].tgl_berangkat}',
+                '${checkPerjalananInDB.rows[0].tgl_kembali}',
+                '${checkPerjalananInDB.rows[0].transportasi}',
+                ${checkPerjalananInDB.rows[0].pengirim},
+                '${checkPerjalananInDB.rows[0].penerima}',
+                ${checkPerjalananInDB.rows[0].penerima_id},
+                'finished',
+                '${createdDate}',
+                '${createdDate}'
+            )
+            RETURNING *
+        `)
+
+        res.status(201).json({
+            success: true,
+            data: newLaporan.rows
+        })
+        
+    } catch (error) {
+        console.log('Error Set Selesai Perjalanan = ', error.message);
+        res.status(error.status || 500).send({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
 module.exports = {
     createPerjalanan,
     approvePerjalanan,
     updatePerjalanan,
     getAllPerjalanan,
+    getAllLaporan,
     getAllTransportasi,
     getAnggaran,
-    getPangkat
+    getPangkat,
+    selesaiPerjalanan
 }
