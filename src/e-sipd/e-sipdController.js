@@ -191,11 +191,11 @@ const approvePerjalanan = async (req, res) => {
                 '${penerimaInDB.rows[0].role}',
                 ${checkPerjalananInDB.rows[0].id},
                 'Pengajuan ${checkPerjalananInDB.rows[0].nomor_sprint}',
-                'Pengajuanmu telah di ${newPerjalanan.rows[0].status == 'approved' ? 'Setujui' : 'Tolak'}',
+                'Pengajuanmu telah di ${newPerjalanan.rows[0].status == 'approved' ? 'Setujui' : 'Tolak'} oleh ${approverDipaInDB.rows[0].nama}',
                 '${status == 'rejected' ? keterangan : 'Pengajuanmu telah Disetujui'}',
                 'close',
                 '${newPerjalanan.rows[0].status}',
-                '${createdDate}',
+                '${new Date(checkPerjalananInDB.rows[0].created_at).toISOString()}',
                 '${createdDate}'
             )
         `)
@@ -294,7 +294,7 @@ const updatePerjalanan = async (req, res) => {
                 'Pengajuan Baru Bernomor Sprint ${newPerjalanan.rows[0].nomor_sprint} telah melakukan Revisi Pengajuan Perjalanan.',
                 'close',
                 '${newPerjalanan.rows[0].status}',
-                '${createdDate}',
+                '${new Date(checkPerjalananInDB.rows[0].created_at).toISOString()}',
                 '${createdDate}'
             )
         `)
