@@ -467,7 +467,7 @@ const selesaiPerjalanan = async (req, res) => {
             RETURNING *;
         `)
 
-        // Create Perjalanan
+        // Create Laporan
         const newLaporan = await client.query(`
             INSERT INTO laporan_perjalanan (
                 keterangan,
