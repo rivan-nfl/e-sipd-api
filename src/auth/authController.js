@@ -37,6 +37,7 @@ const register = async (req, res) => {
                 username,
                 password,
                 role,
+                active,
                 created_at,
                 updated_at
             ) 
@@ -51,6 +52,7 @@ const register = async (req, res) => {
                 '${username}',
                 '${password}',
                 '${role}',
+                true,
                 '${createdDate}',
                 '${createdDate}'
             )

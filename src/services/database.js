@@ -33,6 +33,7 @@ const createTables = async() => {
             username VARCHAR(100) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             role user_role NOT NULL,
+            active BOOLEAN NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
         );
@@ -52,6 +53,7 @@ const createTables = async() => {
             pengirim INT NOT NULL,
             penerima VARCHAR(50) NOT NULL,
             penerima_id INT NOT NULL,
+            anggaran VARCHAR(1000),
             status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL
@@ -73,11 +75,15 @@ const createTables = async() => {
         CREATE TABLE IF NOT EXISTS anggaran_harian (
             id serial PRIMARY KEY,
             pangkat VARCHAR(50) NOT NULL,
+            golongan VARCHAR(50) NOT NULL,
             tingkat VARCHAR(50) NOT NULL,
             anggaran_luar_kota VARCHAR(50) NOT NULL,
             anggaran_dalam_kota VARCHAR(50) NOT NULL,
-            created_at TIMESTAMP NOT NULL,
-            updated_at TIMESTAMP NOT NULL
+            uang_penginapan VARCHAR(50),
+            uang_representasi_luar_kota VARCHAR(50),
+            uang_representasi_dalam_kota VARCHAR(50),
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS notifikasi (
@@ -98,6 +104,7 @@ const createTables = async() => {
             id serial PRIMARY KEY,
             pangkat VARCHAR(50) NOT NULL,
             sub_pangkat VARCHAR(50) NOT NULL,
+            golongan VARCHAR(50) NOT NULL,
             tingkat VARCHAR(50) NOT NULL,
             created_at TIMESTAMP,
             updated_at TIMESTAMP
@@ -118,6 +125,7 @@ const createTables = async() => {
             pengirim INT NOT NULL,
             penerima VARCHAR(50) NOT NULL,
             penerima_id INT NOT NULL,
+            anggaran VARCHAR(1000),
             status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL

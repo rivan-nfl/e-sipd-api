@@ -32,14 +32,56 @@ const createPerjalanan = async (req, res) => {
         if(!pengirimInDB.rows.length) throw error('Pengirim is not a Valid User', 400)
 
         // Check if Penerima Exist
-        const penerimaInDB = await client.query(`SELECT id, nama FROM users WHERE id='${penerima}'`)
+        // const penerimaInDB = await client.query(`SELECT id, nama FROM users WHERE id='${penerima}'`)
+        const penerimaInDB = await client.query(`SELECT * FROM users WHERE id='${penerima}'`)
         if(!penerimaInDB.rows.length) throw error('Penerima Not Found', 404)
 
+        const pangkat = await client.query(`SELECT * FROM pangkat WHERE sub_pangkat='${penerimaInDB.rows[0].pangkat}'`)
+        const anggaranInDB = await client.query(`SELECT * FROM anggaran_harian WHERE golongan='${pangkat.rows[0].golongan}'`)
+        const transportasiInDB = await client.query(`SELECT * FROM transportasi WHERE lokasi_awal='${kota_asal}' AND lokasi_tujuan='${kota_tujuan}' AND nama='${transportasi}'`)
+
         // Dates
-        const tglBerangkat = new Date(tgl_berangkat).toISOString()
-        const tglKembali = new Date(tgl_kembali).toISOString()
-        const createdDate = new Date().toISOString()
+        const tglBerangkat = new Date(tgl_berangkat)
+        const tglKembali = new Date(tgl_kembali)
+        const createdDate = new Date()
+
+        // Calculate the difference in milliseconds
+        const differenceInMs = tglKembali - tglBerangkat;
+
+        // Convert milliseconds to days
+        const daysDifference = Math.ceil(differenceInMs / (1000 * 60 * 60 * 24));
+
+        const anggaran = {
+            biayaHarian: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota), // jumlah orang x jumlah hari x uang harian
+            biayaPenginapan: 1 * daysDifference * Number(anggaranInDB.rows[0].uang_penginapan), // jumlah orang per pangkat x jumlah hari x uang penginapan
+            biayaBBMDanPelumas : null,
+            biayaTransport: null,
+            uangRepresentasi: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota), // jumlah orang per tingkat x jumlah hari x uang representasi
+            biayaHarianInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota} uang harian`,
+            biayaPenginapanInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${anggaranInDB.rows[0].uang_penginapan} (uang penginapan)`,
+            uangRepresentasiInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota} (uang representasi)`,
+            total: 0
+        }
+
+        if(transportasi.toLowerCase() === 'mobil') {
+            anggaran.biayaBBMDanPelumas = {
+                BBM: {
+                    PP: ((Number(transportasiInDB.rows[0].jarak) * 2) * 15000) / 4, // (Jarak KM x 2 (PP) x Harga Bensin pertamax per liter) / 4
+                    jathar: daysDifference * 7 * 15000 // jumlah hari x 7 x Harga Bensin pertamax per liter
+                },
+                pelumas: {
+                    PP : (0.04 * (Number(transportasiInDB.rows[0].jarak) * 2) * 60000) / 4, // (4% x Jarak KM x 2 (PP) x Harga Pelumas fix 60.000) / 4
+                    jathar : 0.04 * daysDifference * 7.5 * 60000 // 4% x jumlah hari x 7.5 x Harga Pelumas fix 60.000
+                }
+            }
+            anggaran.biayaBBMDanPelumasInfo = `PP : (${transportasiInDB.rows[0].jarak} (Jarak KM) x 2 (PP) x 15,000 (Harga Bensin pertamax per liter)) / 4\nJatah Harian : ${daysDifference} (jumlah hari) x 7 x 15,000 (Harga Bensin pertamax per liter)`
+        } else {
+            anggaran.biayaTransport = daysDifference * 2 * Number(transportasiInDB.rows[0].biaya) // jumlah hari x 2 (PP) x Harga tiket terbaru (sesuai kenyataan manual)
+            anggaran.biayaTransportInfo = `${daysDifference} (jumlah hari) x 2 (PP) x ${transportasiInDB.rows[0].biaya} (Harga tiket terbaru)`
+        }
         
+        anggaran.total += anggaran.biayaHarian + anggaran.biayaPenginapan + anggaran.uangRepresentasi + (anggaran.biayaTransport || 0) + (!anggaran.biayaBBMDanPelumas ? 0 : anggaran.biayaBBMDanPelumas.BBM.PP + anggaran.biayaBBMDanPelumas.BBM.jathar + anggaran.biayaBBMDanPelumas.pelumas.PP + anggaran.biayaBBMDanPelumas.pelumas.jathar)
+
         // Create Perjalanan
         const newPerjalanan = await client.query(`
             INSERT INTO esipd (
@@ -56,6 +98,7 @@ const createPerjalanan = async (req, res) => {
                 pengirim,
                 penerima,
                 penerima_id,
+                anggaran,
                 status,
                 created_at,
                 updated_at
@@ -68,15 +111,16 @@ const createPerjalanan = async (req, res) => {
                 '${daerah_tujuan}',
                 '${kota_asal}',
                 '${kota_tujuan}',
-                '${tglBerangkat}',
-                '${tglKembali}',
+                '${tglBerangkat.toISOString()}',
+                '${tglKembali.toISOString()}',
                 '${transportasi}',
                 ${token.id},
                 '${penerimaInDB.rows[0].nama}',
                 ${penerimaInDB.rows[0].id},
+                '${JSON.stringify(anggaran)}',
                 'pending',
-                '${createdDate}',
-                '${createdDate}'
+                '${createdDate.toISOString()}',
+                '${createdDate.toISOString()}'
             )
             RETURNING
                 id,
@@ -92,6 +136,7 @@ const createPerjalanan = async (req, res) => {
                 transportasi,
                 pengirim,
                 penerima,
+                anggaran,
                 status
         `)
 
@@ -117,8 +162,8 @@ const createPerjalanan = async (req, res) => {
                 'Pengajuan Baru Bernomor Sprint ${newPerjalanan.rows[0].nomor_sprint} telah melakukan pengajuan baru.',
                 'close',
                 'pending',
-                '${createdDate}',
-                '${createdDate}'
+                '${createdDate.toISOString()}',
+                '${createdDate.toISOString()}'
             )
         `)
 
@@ -243,12 +288,54 @@ const updatePerjalanan = async (req, res) => {
         if(!approverAdminInDB.rows.length) throw error('Admin Not Found', 404)
 
         // Check if Penerima Exist
-        const penerimaInDB = await client.query(`SELECT id, nama, role FROM users WHERE nama='${checkPerjalananInDB.rows[0].penerima}'`)
+        const penerimaInDB = await client.query(`SELECT * FROM users WHERE nama='${checkPerjalananInDB.rows[0].penerima}'`)
         if(!penerimaInDB.rows.length) throw error('Penerima Not Found', 404)
 
-        const tglBerangkat = new Date(tgl_berangkat).toISOString()
-        const tglKembali = new Date(tgl_kembali).toISOString()
-        const createdDate = new Date().toISOString()
+        const pangkat = await client.query(`SELECT * FROM pangkat WHERE sub_pangkat='${penerimaInDB.rows[0].pangkat}'`)
+        const anggaranInDB = await client.query(`SELECT * FROM anggaran_harian WHERE golongan='${pangkat.rows[0].golongan}'`)
+        const transportasiInDB = await client.query(`SELECT * FROM transportasi WHERE lokasi_awal='${kota_asal}' AND lokasi_tujuan='${kota_tujuan}' AND nama='${transportasi}'`)
+
+        // Dates
+        const tglBerangkat = new Date(tgl_berangkat)
+        const tglKembali = new Date(tgl_kembali)
+        const createdDate = new Date()
+
+        // Calculate the difference in milliseconds
+        const differenceInMs = tglKembali - tglBerangkat;
+
+        // Convert milliseconds to days
+        const daysDifference = Math.ceil(differenceInMs / (1000 * 60 * 60 * 24));
+
+        const anggaran = {
+            biayaHarian: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota), // jumlah orang x jumlah hari x uang harian
+            biayaPenginapan: 1 * daysDifference * Number(anggaranInDB.rows[0].uang_penginapan), // jumlah orang per pangkat x jumlah hari x uang penginapan
+            biayaBBMDanPelumas : null,
+            biayaTransport: null,
+            uangRepresentasi: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota),
+            biayaHarianInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota} uang harian`,
+            biayaPenginapanInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${anggaranInDB.rows[0].uang_penginapan} (uang penginapan)`,
+            uangRepresentasiInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota} (uang representasi)`,
+            total: 0 // jumlah orang per tingkat x jumlah hari x uang representasi
+        }
+
+        if(transportasi.toLowerCase() === 'mobil') {
+            anggaran.biayaBBMDanPelumas = {
+                BBM: {
+                    PP: ((Number(transportasiInDB.rows[0].jarak) * 2) * 15000) / 4, // (Jarak KM x 2 (PP) x Harga Bensin pertamax per liter) / 4
+                    jathar: daysDifference * 7 * 15000 // jumlah hari x 7 x Harga Bensin pertamax per liter
+                },
+                pelumas: {
+                    PP : (0.04 * (Number(transportasiInDB.rows[0].jarak) * 2) * 60000) / 4, // (4% x Jarak KM x 2 (PP) x Harga Pelumas fix 60.000) / 4
+                    jathar : 0.04 * daysDifference * 7.5 * 60000 // 4% x jumlah hari x 7.5 x Harga Pelumas fix 60.000
+                }
+            }
+            anggaran.biayaBBMDanPelumasInfo = `PP : (${transportasiInDB.rows[0].jarak} (Jarak KM) x 2 (PP) x 15,000 (Harga Bensin pertamax per liter)) / 4\nJatah Harian : ${daysDifference} (jumlah hari) x 7 x 15,000 (Harga Bensin pertamax per liter)`
+        } else {
+            anggaran.biayaTransport = daysDifference * 2 * Number(transportasiInDB.rows[0].biaya) // jumlah hari x 2 (PP) x Harga tiket terbaru (sesuai kenyataan manual)
+            anggaran.biayaTransportInfo = `${daysDifference} (jumlah hari) x 2 (PP) x ${transportasiInDB.rows[0].biaya} (Harga tiket terbaru)`
+        }
+
+        anggaran.total += anggaran.biayaHarian + anggaran.biayaPenginapan + anggaran.uangRepresentasi + (anggaran.biayaTransport || 0) + (!anggaran.biayaBBMDanPelumas ? 0 : anggaran.biayaBBMDanPelumas.BBM.PP + anggaran.biayaBBMDanPelumas.BBM.jathar + anggaran.biayaBBMDanPelumas.pelumas.PP + anggaran.biayaBBMDanPelumas.pelumas.jathar)
 
         // Update
         const newPerjalanan = await client.query(`
@@ -260,14 +347,15 @@ const updatePerjalanan = async (req, res) => {
                 daerah_tujuan = '${daerah_tujuan}',
                 kota_asal = '${kota_asal}',
                 kota_tujuan = '${kota_tujuan}',
-                tgl_berangkat = '${tglBerangkat}',
-                tgl_kembali = '${tglKembali}',
+                tgl_berangkat = '${tglBerangkat.toISOString()}',
+                tgl_kembali = '${tglKembali.toISOString()}',
                 transportasi = '${transportasi}',
                 pengirim = ${token.id},
                 penerima = '${penerimaInDB.rows[0].nama}',
                 penerima_id = ${penerimaInDB.rows[0].id},
+                anggaran = '${JSON.stringify(anggaran)}',
                 status = 'pending',
-                updated_at = '${createdDate}'
+                updated_at = '${createdDate.toISOString()}'
             WHERE id = ${req.params.perjalanan_id}
             RETURNING *;
         `)
@@ -295,7 +383,7 @@ const updatePerjalanan = async (req, res) => {
                 'close',
                 '${newPerjalanan.rows[0].status}',
                 '${new Date(checkPerjalananInDB.rows[0].created_at).toISOString()}',
-                '${createdDate}'
+                '${createdDate.toISOString()}'
             )
         `)
 
@@ -483,6 +571,7 @@ const selesaiPerjalanan = async (req, res) => {
                 pengirim,
                 penerima,
                 penerima_id,
+                anggaran,
                 status,
                 created_at,
                 updated_at
@@ -501,6 +590,7 @@ const selesaiPerjalanan = async (req, res) => {
                 ${checkPerjalananInDB.rows[0].pengirim},
                 '${checkPerjalananInDB.rows[0].penerima}',
                 ${checkPerjalananInDB.rows[0].penerima_id},
+                '${checkPerjalananInDB.rows[0].anggaran}',
                 'finished',
                 '${createdDate}',
                 '${createdDate}'
