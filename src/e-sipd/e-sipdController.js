@@ -6,7 +6,20 @@ const createPerjalanan = async (req, res) => {
     try {
         const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
 
-        const { keterangan, nomor_sprint, nomor_sppd, jenis_perjalanan, daerah_tujuan, kota_asal, kota_tujuan, tgl_berangkat, tgl_kembali, transportasi, penerima } = req.body
+        const { 
+            keterangan, 
+            nomor_sprint, 
+            nomor_sppd, 
+            jenis_perjalanan, 
+            daerah_tujuan, 
+            kota_asal, 
+            kota_tujuan, 
+            tgl_berangkat, 
+            tgl_kembali, 
+            transportasi, 
+            penerima,
+            pejalan
+        } = req.body
 
         // Validation
         if(
@@ -20,7 +33,8 @@ const createPerjalanan = async (req, res) => {
             !tgl_berangkat ||
             !tgl_kembali ||
             !transportasi ||
-            !penerima
+            !penerima ||
+            !pejalan.length
         ) throw error(`All Fields is required !`, 400)
 
         // Check if Perjalanan exist
@@ -51,15 +65,26 @@ const createPerjalanan = async (req, res) => {
         // Convert milliseconds to days
         const daysDifference = Math.ceil(differenceInMs / (1000 * 60 * 60 * 24));
 
+        let totalPenginapan = 0
+        let totalRepresentasi = 0
+
+        for(let i = 0;i < pejalan.length; i++) {
+            const pangkat = await client.query(`SELECT * FROM pangkat WHERE sub_pangkat='${pejalan[i].pangkat}'`)
+            const anggaranInDB = await client.query(`SELECT * FROM anggaran_harian WHERE golongan='${pangkat.rows[0].golongan}'`)
+            const anggaranTingkatInDB = await client.query(`SELECT * FROM anggaran_harian WHERE tingkat='${pangkat.rows[0].tingkat}'`)
+            totalPenginapan += Number(anggaranInDB.rows[0].uang_penginapan)
+            totalRepresentasi += Number(jenis_perjalanan === 'luar_kota' ? anggaranTingkatInDB.rows[0].uang_representasi_luar_kota : anggaranTingkatInDB.rows[0].uang_representasi_dalam_kota)
+        }
+
         const anggaran = {
-            biayaHarian: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota), // jumlah orang x jumlah hari x uang harian
-            biayaPenginapan: 1 * daysDifference * Number(anggaranInDB.rows[0].uang_penginapan), // jumlah orang per pangkat x jumlah hari x uang penginapan
+            biayaHarian: pejalan.length * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota), // jumlah orang x jumlah hari x uang harian
+            biayaHarianInfo: `${pejalan.length} (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota} uang harian`,
+            biayaPenginapan: pejalan.length * daysDifference * totalPenginapan, // jumlah orang per pangkat x jumlah hari x uang penginapan
+            biayaPenginapanInfo: `${pejalan.length} (jumlah orang) x ${daysDifference} (jumlah hari) x ${totalPenginapan} (total uang penginapan)`,
+            uangRepresentasi: pejalan.length * daysDifference * totalRepresentasi, // jumlah orang per tingkat x jumlah hari x uang representasi
+            uangRepresentasiInfo: `${pejalan.length} (jumlah orang) x ${daysDifference} (jumlah hari) x ${totalRepresentasi} (total uang representasi)`,
             biayaBBMDanPelumas : null,
             biayaTransport: null,
-            uangRepresentasi: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota), // jumlah orang per tingkat x jumlah hari x uang representasi
-            biayaHarianInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota} uang harian`,
-            biayaPenginapanInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${anggaranInDB.rows[0].uang_penginapan} (uang penginapan)`,
-            uangRepresentasiInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota} (uang representasi)`,
             total: 0
         }
 
@@ -98,6 +123,7 @@ const createPerjalanan = async (req, res) => {
                 pengirim,
                 penerima,
                 penerima_id,
+                pejalan,
                 anggaran,
                 status,
                 created_at,
@@ -117,6 +143,7 @@ const createPerjalanan = async (req, res) => {
                 ${token.id},
                 '${penerimaInDB.rows[0].nama}',
                 ${penerimaInDB.rows[0].id},
+                '${JSON.stringify(pejalan)}',
                 '${JSON.stringify(anggaran)}',
                 'pending',
                 '${createdDate.toISOString()}',
@@ -136,6 +163,7 @@ const createPerjalanan = async (req, res) => {
                 transportasi,
                 pengirim,
                 penerima,
+                pejalan
                 anggaran,
                 status
         `)
@@ -262,7 +290,20 @@ const approvePerjalanan = async (req, res) => {
 const updatePerjalanan = async (req, res) => {
     try {
         const token = jwt.verify(String(req.headers.authorization).slice(7), "$!1HoW6Dr1")
-        const { keterangan, nomor_sprint, nomor_sppd, jenis_perjalanan, daerah_tujuan, kota_asal, kota_tujuan, tgl_berangkat, tgl_kembali, transportasi, penerima } = req.body
+        const { 
+            keterangan, 
+            nomor_sprint, 
+            nomor_sppd, 
+            jenis_perjalanan, 
+            daerah_tujuan, 
+            kota_asal, 
+            kota_tujuan, 
+            tgl_berangkat, 
+            tgl_kembali, 
+            transportasi, 
+            penerima,
+            pejalan
+        } = req.body
 
         // Validation
         if(
@@ -276,7 +317,8 @@ const updatePerjalanan = async (req, res) => {
             !tgl_berangkat ||
             !tgl_kembali ||
             !transportasi ||
-            !penerima
+            !penerima ||
+            !pejalan.length
         ) throw error(`All Fields is required !`, 400)
 
         // Check if Perjalanan exist
@@ -306,15 +348,26 @@ const updatePerjalanan = async (req, res) => {
         // Convert milliseconds to days
         const daysDifference = Math.ceil(differenceInMs / (1000 * 60 * 60 * 24));
 
+        let totalPenginapan = 0
+        let totalRepresentasi = 0
+
+        for(let i = 0;i < pejalan.length; i++) {
+            const pangkat = await client.query(`SELECT * FROM pangkat WHERE sub_pangkat='${pejalan[i].pangkat}'`)
+            const anggaranInDB = await client.query(`SELECT * FROM anggaran_harian WHERE golongan='${pangkat.rows[0].golongan}'`)
+            const anggaranTingkatInDB = await client.query(`SELECT * FROM anggaran_harian WHERE tingkat='${pangkat.rows[0].tingkat}'`)
+            totalPenginapan += Number(anggaranInDB.rows[0].uang_penginapan)
+            totalRepresentasi += Number(jenis_perjalanan === 'luar_kota' ? anggaranTingkatInDB.rows[0].uang_representasi_luar_kota : anggaranTingkatInDB.rows[0].uang_representasi_dalam_kota)
+        }
+
         const anggaran = {
-            biayaHarian: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota), // jumlah orang x jumlah hari x uang harian
-            biayaPenginapan: 1 * daysDifference * Number(anggaranInDB.rows[0].uang_penginapan), // jumlah orang per pangkat x jumlah hari x uang penginapan
+            biayaHarian: pejalan.length * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota), // jumlah orang x jumlah hari x uang harian
+            biayaHarianInfo: `${pejalan.length} (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota} uang harian`,
+            biayaPenginapan: pejalan.length * daysDifference * totalPenginapan, // jumlah orang per pangkat x jumlah hari x uang penginapan
+            biayaPenginapanInfo: `${pejalan.length} (jumlah orang) x ${daysDifference} (jumlah hari) x ${totalPenginapan} (total uang penginapan)`,
+            uangRepresentasi: pejalan.length * daysDifference * totalRepresentasi, // jumlah orang per tingkat x jumlah hari x uang representasi
+            uangRepresentasiInfo: `${pejalan.length} (jumlah orang) x ${daysDifference} (jumlah hari) x ${totalRepresentasi} (total uang representasi)`,
             biayaBBMDanPelumas : null,
             biayaTransport: null,
-            uangRepresentasi: 1 * daysDifference * Number(jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota),
-            biayaHarianInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].anggaran_luar_kota : anggaranInDB.rows[0].anggaran_dalam_kota} uang harian`,
-            biayaPenginapanInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${anggaranInDB.rows[0].uang_penginapan} (uang penginapan)`,
-            uangRepresentasiInfo: `1 (jumlah orang) x ${daysDifference} (jumlah hari) x ${jenis_perjalanan === 'luar_kota' ? anggaranInDB.rows[0].uang_representasi_luar_kota : anggaranInDB.rows[0].uang_representasi_dalam_kota} (uang representasi)`,
             total: 0 // jumlah orang per tingkat x jumlah hari x uang representasi
         }
 
@@ -353,6 +406,7 @@ const updatePerjalanan = async (req, res) => {
                 pengirim = ${token.id},
                 penerima = '${penerimaInDB.rows[0].nama}',
                 penerima_id = ${penerimaInDB.rows[0].id},
+                pejalan = '${JSON.stringify(pejalan)}',
                 anggaran = '${JSON.stringify(anggaran)}',
                 status = 'pending',
                 updated_at = '${createdDate.toISOString()}'
