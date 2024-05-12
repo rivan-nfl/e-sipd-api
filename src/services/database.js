@@ -126,6 +126,7 @@ const createTables = async() => {
             pengirim INT NOT NULL,
             penerima VARCHAR(50) NOT NULL,
             penerima_id INT NOT NULL,
+            pejalan VARCHAR(1000),
             anggaran VARCHAR(1000),
             status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP NOT NULL,
